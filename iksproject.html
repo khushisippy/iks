@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chanakya’s Data Quest – Snake & Ladder</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Poppins:wght@400;500;600&display=swap');
+
+  :root {
+    --gold: #c9a227;
+    --dark-gold: #a67c00;
+    --parchment: #f8f1e3;
+    --ink: #2c1810;
+    --green: #2e7d32;
+    --red: #c62828;
+    --board-bg: #3e2723;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #1a0f0a, #3e2723);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  .subtitle {
+    color: #e0c98a;
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .game-container {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 1200px;
+  }
+
+  .board-wrapper {
+    background: var(--board-bg);
+    border: 7px solid var(--dark-gold);
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(10, 54px);
+    grid-template-rows: repeat(10, 54px);
+    gap: 3px;
+    background: #5d4037;
+  }
+
+  .cell {
+    background: var(--parchment);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 600;
+    position: relative;
+  }
+
+  .cell.ladder { background: #e8f5e9; }
+  .cell.snake  { background: #ffebee; }
+  .cell.start, .cell.finish {
+    background: var(--gold);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .player {
+    width: 26px;
+    height: 26px;
+    background: #1565c0;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    position: absolute;
+    z-index: 10;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    transition: all 0.35s ease;
+  }
+
+  .side-panel {
+    width: 340px;
+    background: var(--parchment);
+    border-radius: 12px;
+    border: 5px solid var(--dark-gold);
+    padding: 18px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .dice-area { text-align: center; }
+
+  .dice {
+    width: 74px;
+    height: 74px;
+    background: #fff;
+    border: 4px solid var(--ink);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.3rem;
+    font-weight: 700;
+    margin: 0 auto 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  button {
+    background: linear-gradient(to bottom, var(--gold), var(--dark-gold));
+    color: #fff;
+    border: none;
+    padding: 11px 24px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    transition: transform 0.15s;
+  }
+
+  button:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .status {
+    text-align: center;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .message {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #5d4037;
+    min-height: 36px;
+  }
+
+  .progress {
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-gold);
+  }
+
+  /* Question Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+
+  .modal-overlay.show { display: flex; }
+
+  .modal {
+    background: var(--parchment);
+    border: 6px solid var(--dark-gold);
+    border-radius: 14px;
+    max-width: 520px;
+    width: 100%;
+    padding: 24px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+  }
+
+  .modal h3 {
+    font-family: 'Cinzel', serif;
+    color: var(--dark-gold);
+    margin-bottom: 12px;
+    font-size: 1.25rem;
+  }
+
+  .modal p {
+    margin-bottom: 16px;
+    line-height: 1.45;
+    font-size: 1rem;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .option-btn {
+    background: #fff;
+    border: 2px solid #c9a227;
+    color: var(--ink);
+    padding: 12px 16px;
+    text-align: left;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .option-btn:hover:not(:disabled) {
+    background: #fff8e1;
+  }
+
+  .option-btn.correct {
+    background: #c8e6c9;
+    border-color: #2e7d32;
+  }
+
+  .option-btn.wrong {
+    background: #ffcdd2;
+    border-color: #c62828;
+  }
+
+  .attempts {
+    font-size: 0.9rem;
+    color: #5d4037;
+    margin-bottom: 8px;
+  }
+
+  .feedback {
+    font-weight: 600;
+    min-height: 24px;
+    margin-bottom: 8px;
+  }
+
+  .legend {
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .legend span {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  @media (max-width: 900px) {
+    .board {
+      grid-template-columns: repeat(10, 40px);
+      grid-template-rows: repeat(10, 40px);
+    }
+    .cell { font-size: 0.62rem; }
+    .side-panel { width: 100%; max-width: 400px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Chanakya’s Data Quest</h1>
+<p class="subtitle">Roll a 6 to begin • Answer 10 questions • Only 2 attempts each</p>
+
+<div class="game-container">
+  <div class="board-wrapper">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="side-panel">
+    <div class="dice-area">
+      <div class="dice" id="dice">?</div>
+      <button id="rollBtn">Roll the Dice</button>
+    </div>
+
+    <div class="status" id="status">Position: 1 • Need a 6 to start</div>
+    <div class="progress" id="progress">Questions: 0 / 10</div>
+    <div class="message" id="message">Roll a 6 to begin your journey across the kingdom.</div>
+
+    <div class="legend">
+      <p><span style="background:#e8f5e9"></span> Ladder – Good data practice</p>
+      <p><span style="background:#ffebee"></span> Snake – Guesswork / False report</p>
+      <p><span style="background:#c9a227"></span> Start / Finish</p>
+    </div>
+  </div>
+</div>
+
+<!-- Question Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="qTitle">Question</h3>
+    <p id="qText"></p>
+    <div class="attempts" id="attemptsText">Attempts left: 2</div>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+</div>
+
+<script>
+  // ========== QUESTIONS (from Arthashastra / Data theme) ==========
+  const allQuestions = [
+    {
+      q: "According to the Arthashastra tradition, what should a ruler do before deciding how much grain to store?",
+      options: [
+        "Ask the priests for an estimate",
+        "Collect actual data on population, production and existing reserves",
+        "Use last year’s figures without checking",
+        "Guess based on the previous harvest"
+      ],
+      correct: 1
+    },
+    {
+      q: "Why did Chanakya refuse to give an immediate answer about grain reserves?",
+      options: [
+        "He did not know the answer",
+        "He believed guessing was dangerous for the kingdom",
+        "He wanted to delay the decision",
+        "The king already knew the figures"
+      ],
+      correct: 1
+    },
+    {
+      q: "Which of the following was commonly recorded by ancient administrators?",
+      options: [
+        "Only the number of soldiers",
+        "Population, agriculture, land, trade and tax revenues",
+        "Only the king’s personal wealth",
+        "Only temple donations"
+      ],
+      correct: 1
+    },
+    {
+      q: "What modern practice is most similar to the ancient population records?",
+      options: [
+        "Social media surveys",
+        "Census operations",
+        "Opinion polls",
+        "Weather forecasts"
+      ],
+      correct: 1
+    },
+    {
+      q: "What happens if a tax report is false or production is overestimated?",
+      options: [
+        "The treasury becomes stronger",
+        "The kingdom may face empty granaries or empty treasury",
+        "Nothing important changes",
+        "Soldiers become happier"
+      ],
+      correct: 1
+    },
+    {
+      q: "What is the core principle taught through these data practices?",
+      options: [
+        "A ruler should always trust his ministers completely",
+        "Good decisions require good and verified data",
+        "Guesswork is acceptable if done quickly",
+        "Only the army needs accurate numbers"
+      ],
+      correct: 1
+    },
+    {
+      q: "Which of these is an example of a ‘snake’ (bad practice) in governance?",
+      options: [
+        "Verifying crop production reports",
+        "Making decisions based on assumptions without evidence",
+        "Maintaining tax registers",
+        "Collecting rainfall data"
+      ],
+      correct: 1
+    },
+    {
+      q: "Ancient village and provincial reports are similar to which modern tool?",
+      options: [
+        "Television news",
+        "Government surveys and administrative databases",
+        "Private company advertisements",
+        "Festival calendars"
+      ],
+      correct: 1
+    },
+    {
+      q: "Why was regular inspection of records considered essential?",
+      options: [
+        "To keep the officials busy",
+        "Because incorrect information can lead to poor decisions",
+        "Only for collecting more taxes",
+        "Because the king enjoyed reading reports"
+      ],
+      correct: 1
+    },
+    {
+      q: "What does ‘Quantitative Governance’ mainly mean in this context?",
+      options: [
+        "Ruling only by numbers without wisdom",
+        "Using reliable numerical information to guide important decisions",
+        "Counting only the number of soldiers",
+        "Ignoring all qualitative information"
+      ],
+      correct: 1
+    }
+  ];
+
+  // ========== GAME STATE ==========
+  let position = 1;
+  let gameStarted = false;
+  let isMoving = false;
+  let questionsAnswered = 0;
+  let availableQuestions = [...allQuestions];
+  let currentQuestion = null;
+  let attemptsLeft = 2;
+  let pendingDice = 0;
+
+  const ladders = {
+    4: 25, 13: 46, 33: 49, 42: 63,
+    50: 69, 62: 81, 74: 92
+  };
+
+  const snakes = {
+    27: 5, 40: 3, 54: 31, 66: 45,
+    76: 58, 89: 53, 99: 41
+  };
+
+  // ========== DOM ==========
+  const boardEl = document.getElementById('board');
+  const diceEl = document.getElementById('dice');
+  const rollBtn = document.getElementById('rollBtn');
+  const statusEl = document.getElementById('status');
+  const messageEl = document.getElementById('message');
+  const progressEl = document.getElementById('progress');
+  const modal = document.getElementById('modal');
+  const qTitle = document.getElementById('qTitle');
+  const qText = document.getElementById('qText');
+  const optionsEl = document.getElementById('options');
+  const attemptsText = document.getElementById('attemptsText');
+  const feedback = document.getElementById('feedback');
+
+  // ========== BOARD ==========
+  function createBoard() {
+    const cells = [];
+    for (let row = 9; row >= 0; row--) {
+      for (let col = 0; col < 10; col++) {
+        const num = row % 2 === 0
+          ? row * 10 + col + 1
+          : row * 10 + (9 - col) + 1;
+        cells.push(num);
+      }
+    }
+
+    cells.forEach(num => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${num}`;
+      cell.textContent = num;
+      if (num === 1) cell.classList.add('start');
+      if (num === 100) cell.classList.add('finish');
+      if (ladders[num]) cell.classList.add('ladder');
+      if (snakes[num]) cell.classList.add('snake');
+      boardEl.appendChild(cell);
+    });
+  }
+
+  function placePlayer(pos) {
+    document.querySelectorAll('.player').forEach(p => p.remove());
+    const cell = document.getElementById(`cell-${pos}`);
+    if (cell) {
+      const token = document.createElement('div');
+      token.className = 'player';
+      cell.appendChild(token);
+    }
+  }
+
+  // ========== DICE ==========
+  rollBtn.addEventListener('click', () => {
+    if (isMoving || position >= 100) return;
+
+    isMoving = true;
+    rollBtn.disabled = true;
+
+    let rolls = 0;
+    const interval = setInterval(() => {
+      diceEl.textContent = Math.floor(Math.random() * 6) + 1;
+      rolls++;
+      if (rolls > 12) {
+        clearInterval(interval);
+        const final = Math.floor(Math.random() * 6) + 1;
+        diceEl.textContent = final;
+        handleDiceResult(final);
+      }
+    }, 70);
+  });
+
+  function handleDiceResult(value) {
+    // Still waiting for 6 to start
+    if (!gameStarted) {
+      if (value === 6) {
+        gameStarted = true;
+        messageEl.textContent = "You rolled a 6! The quest begins. Answer questions to move.";
+        statusEl.textContent = `Position: ${position}`;
+        isMoving = false;
+        rollBtn.disabled = false;
+      } else {
+        messageEl.textContent = `You rolled a ${value}. Need a 6 to start!`;
+        isMoving = false;
+        rollBtn.disabled = false;
+      }
+      return;
+    }
+
+    // Game already started → show a question
+    if (availableQuestions.length === 0 || questionsAnswered >= 10) {
+      // No more questions – free movement
+      messageEl.textContent = "All 10 questions completed! Free movement now.";
+      movePlayer(value);
+      return;
+    }
+
+    // Pick a random remaining question
+    const idx = Math.floor(Math.random() * availableQuestions.length);
+    currentQuestion = availableQuestions[idx];
+    availableQuestions.splice(idx, 1);
+
+    pendingDice = value;
+    attemptsLeft = 2;
+    showQuestion();
+  }
+
+  // ========== QUESTION ==========
+  function showQuestion() {
+    qTitle.textContent = `Question ${questionsAnswered + 1} of 10`;
+    qText.textContent = currentQuestion.q;
+    attemptsText.textContent = `Attempts left: ${attemptsLeft}`;
+    feedback.textContent = "";
+    optionsEl.innerHTML = "";
+
+    currentQuestion.options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.textContent = opt;
+      btn.onclick = () => checkAnswer(i, btn);
+      optionsEl.appendChild(btn);
+    });
+
+    modal.classList.add('show');
+  }
+
+  function checkAnswer(selected, btn) {
+    const buttons = optionsEl.querySelectorAll('.option-btn');
+    buttons.forEach(b => b.disabled = true);
+
+    if (selected === currentQuestion.correct) {
+      btn.classList.add('correct');
+      feedback.textContent = "Correct! You may move.";
+      feedback.style.color = "#2e7d32";
+
+      setTimeout(() => {
+        modal.classList.remove('show');
+        questionsAnswered++;
+        progressEl.textContent = `Questions: ${questionsAnswered} / 10`;
+        movePlayer(pendingDice);
+      }, 1100);
+    } else {
+      btn.classList.add('wrong');
+      attemptsLeft--;
+      attemptsText.textContent = `Attempts left: ${attemptsLeft}`;
+
+      if (attemptsLeft > 0) {
+        feedback.textContent = "Wrong! Try once more.";
+        feedback.style.color = "#c62828";
+        setTimeout(() => {
+          buttons.forEach(b => {
+            b.disabled = false;
+            b.classList.remove('wrong');
+          });
+        }, 800);
+      } else {
+        feedback.textContent = "Both attempts used. Question locked. No move.";
+        feedback.style.color = "#c62828";
+        // Highlight correct answer
+        buttons[currentQuestion.correct].classList.add('correct');
+
+        setTimeout(() => {
+          modal.classList.remove('show');
+          questionsAnswered++;
+          progressEl.textContent = `Questions: ${questionsAnswered} / 10`;
+          messageEl.textContent = "Question locked after 2 wrong attempts. Stay in place.";
+          isMoving = false;
+          rollBtn.disabled = false;
+        }, 1800);
+      }
+    }
+  }
+
+  // ========== MOVEMENT ==========
+  function movePlayer(steps) {
+    let newPos = position + steps;
+    if (newPos > 100) newPos = 100;
+
+    let current = position;
+    const stepInterval = setInterval(() => {
+      current++;
+      if (current > newPos) {
+        clearInterval(stepInterval);
+
+        // Check ladder / snake
+        setTimeout(() => {
+          if (ladders[newPos]) {
+            messageEl.textContent = "Ladder! Accurate records lift you forward.";
+            newPos = ladders[newPos];
+            placePlayer(newPos);
+          } else if (snakes[newPos]) {
+            messageEl.textContent = "Snake! Guesswork pulls you down.";
+            newPos = snakes[newPos];
+            placePlayer(newPos);
+          } else {
+            messageEl.textContent = `Moved to square ${newPos}.`;
+          }
+
+          position = newPos;
+          statusEl.textContent = `Position: ${position}`;
+          placePlayer(position);
+
+          if (position >= 100) {
+            messageEl.textContent = "Victory! You reached the palace with reliable information.";
+            rollBtn.disabled = true;
+            rollBtn.textContent = "Quest Complete";
+          } else {
+            isMoving = false;
+            rollBtn.disabled = false;
+          }
+        }, 280);
+        return;
+      }
+      placePlayer(current);
+    }, 160);
+  }
+
+  // ========== INIT ==========
+  createBoard();
+  placePlayer(1);
+</script>
+</body>
+</html>
